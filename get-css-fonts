@@ -2,21 +2,21 @@
 
 """Create a fonts CSS file with local resources from a Google fonts URL."""
 
+import logging
 import os
 import re
 import sys
-import logging
-from collections import namedtuple
 from argparse import ArgumentParser
+from collections import namedtuple
 
 import requests
 
-
 CSS_RE = re.compile(
     r"^(?P<begin>\s+src:.*)local\('(?P<name>.*?)'\),\s+"
-    r"url\((?P<url>.*?)\)(?P<end>.*)")
+    r"url\((?P<url>.*?)\)(?P<end>.*)"
+)
 
-Font = namedtuple('Font', ['filename', 'url'])
+Font = namedtuple("Font", ["filename", "url"])
 
 # setup logging
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
@@ -26,11 +26,11 @@ logger = logging.getLogger()
 def parse_args():
     """Parse command line."""
     parser = ArgumentParser(description=__doc__)
-    parser.add_argument('url', help='a URL for fonts CSS')
+    parser.add_argument("url", help="a URL for fonts CSS")
     parser.add_argument(
-        '--cssfile', default='fonts.css', help='target filename for fonts CSS')
-    parser.add_argument(
-        '--fontdir', default='fonts', help='target directory for fonts')
+        "--cssfile", default="fonts.css", help="target filename for fonts CSS"
+    )
+    parser.add_argument("--fontdir", default="fonts", help="target directory for fonts")
     return parser.parse_args()
 
 
@@ -41,17 +41,19 @@ def fetch_file(url, filename=None):
 
     """
     response = requests.get(url)
-    logger.info('fetching {url}'.format(url=url))
+    logger.info(f"fetching {url}")
     if response.status_code != 200:
         raise Exception(
             'Failed fetcing "{url}: {r.status_code} {r.reason}'.format(
-                url=url, r=response))
+                url=url, r=response
+            )
+        )
 
     if not filename:
         return response.text
 
-    with open(filename, 'w') as fd:
-        logger.info('saving content to {filename}'.format(filename=filename))
+    with open(filename, "w") as fd:
+        logger.info(f"saving content to {filename}")
         fd.write(response.text)
 
 
@@ -68,7 +70,7 @@ def make_css_urls_local(content, fontdir):
         if font:
             fonts.append(font)
         converted.append(line)
-    return '\n'.join(converted), fonts
+    return "\n".join(converted), fonts
 
 
 def _process_line(line, fontdir):
@@ -77,10 +79,11 @@ def _process_line(line, fontdir):
         return line, None
 
     data = match.groupdict()
-    filename = os.path.join(fontdir, data['name'] + '.ttf')
+    filename = os.path.join(fontdir, data["name"] + ".ttf")
     line = "{begin}local('{name}'), url('{filename}'){end}".format(
-        filename=filename, **data)
-    return line, Font(filename, data['url'])
+        filename=filename, **data
+    )
+    return line, Font(filename, data["url"])
 
 
 def main():
@@ -88,14 +91,12 @@ def main():
 
     # fetch the fonts CSS
     css = fetch_file(args.url)
-    relative_fontdir = os.path.relpath(
-        args.fontdir, os.path.dirname(args.cssfile))
+    relative_fontdir = os.path.relpath(args.fontdir, os.path.dirname(args.cssfile))
     css, fonts = make_css_urls_local(css, relative_fontdir)
 
     # write updated CSS
-    with open(args.cssfile, 'w') as fd:
-        logger.info(
-            'saving updated CSS to {filename}'.format(filename=args.cssfile))
+    with open(args.cssfile, "w") as fd:
+        logger.info(f"saving updated CSS to {args.cssfile}")
         fd.write(css)
 
     # fetch font files
@@ -104,5 +105,5 @@ def main():
         fetch_file(font.url, filename=font.filename)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
